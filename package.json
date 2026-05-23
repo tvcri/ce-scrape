@@ -1,0 +1,15 @@
+{
+  "name": "ce-scrape",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "scrapeServiceRequest.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "node-html-parser": "^7.1.0"
+  }
+}
