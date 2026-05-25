@@ -25,9 +25,17 @@ CE is an ASP.NET WebForms application using:
 
 ---
 
+## Project structure
+
+- **`scrape-rides.js`** — TVCRI ride-specific orchestration (~220 lines): CLI parsing, ride extraction, Phase 1/2 loops, ride SR field mapping
+- **`ce-platform.js`** — ClubExpress generic platform layer (~150 lines): VIEWSTATE handling, Telerik AJAX, pagination, session mechanics, HTML parsing helpers
+- **Dependencies**: `node-html-parser` only (no build tools, no test framework)
+
+The module split makes the CE platform mechanics reusable for scrapers for other service types (donations, volunteer hours, etc.) with only the ride-specific import and field extraction changing.
+
 ## The main script: scrape-rides.js
 
-Single integrated script. No external dependencies beyond `node-html-parser`.
+Ride-specific orchestration and entry point. No external dependencies beyond `node-html-parser`.
 
 ```bash
 npm install node-html-parser
@@ -49,13 +57,13 @@ node scrape-rides.js --cookie-file cookies.txt --output rides.csv
 ### Two-phase execution
 
 **Phase 1** — Listing page pagination:
-1. GET `page_id=650` to fetch page 1 and capture VIEWSTATE + filter state
-2. POST subsequent pages using `__EVENTTARGET=ctl00$ctl00$search_button` and `__EVENTARGUMENT=<pageNum>`
-3. Extract `srp_srid` values only from rows where `.service-name` starts with `"Ride:"`
+1. GET `page_id=650` to fetch page 1 and capture VIEWSTATE + filter state (via `ce-platform.js::ceGetPage`, `readViewstate`, `searchFilterFields`)
+2. POST subsequent pages using `__EVENTTARGET=ctl00$ctl00$search_button` and `__EVENTARGUMENT=<pageNum>` (via `ce-platform.js::cePostPage`)
+3. Extract `srp_srid` values only from rows where `.service-name` starts with `"Ride:"` (ride-specific; fallback path now also filters for Ride: context)
 4. Stop gracefully if a page returns no results (CE pagination cap ~7 pages)
 
 **Phase 2** — SR detail page extraction:
-For each collected srid, GET `page_id=660&action=edit&srp_srid=<id>` and extract:
+For each collected srid, GET `page_id=660&action=edit&srp_srid=<id>` (via `ce-platform.js::ceGetPage`) and extract (via `extractSrDetail()`, ride-specific):
 
 | CSV field | CE element ID | Notes |
 |-----------|---------------|-------|
@@ -106,13 +114,41 @@ The CE Web UI has an undocumented rolling window constraint independent of the d
 CE splits VIEWSTATE across 4 fields. All 4 must be included in every POST. The partial UpdatePanel responses for pages 2+ do not include updated VIEWSTATE, so the page 1 values are carried forward throughout the run. This works in practice.
 
 ### Telerik tokens (TSSM, TSM)
-`style_sheet_manager_TSSM` and `script_manager_TSM` are static strings tied to CE's deployed Telerik version (`2018.2.710.45`). If CE upgrades Telerik, these will need to be recaptured from a fresh DevTools curl. They are hardcoded constants at the top of the script.
+`style_sheet_manager_TSSM` and `script_manager_TSM` are static strings tied to CE's deployed Telerik version (`2018.2.710.45`). If CE upgrades Telerik, these will need to be recaptured from a fresh DevTools curl. They are exported constants in `ce-platform.js`.
 
 ### Foreign srids
 Since `srp_srid` is a global autoincrement, fetching unknown srids returns CE pages for other clubs showing `request_number = #1` with no member name. The script skips these via the member name guard. This is only relevant when using `--srid-file` with a range; the integrated script collects srids only from the listing page and doesn't encounter this issue.
 
 ### RadComboBox display text
 CE uses Telerik RadComboBox widgets for dropdowns. The actual `<select>` is hidden; the visible display text lives in a sibling `<input class="rcbInput">` with ID `{dropdown_id}_Input`. Filter field values are read from these input elements, not from the hidden ClientState JSON (except for the ClientState fields themselves which must be passed verbatim).
+
+---
+
+## ce-platform.js API
+
+Generic ClubExpress platform layer, reusable for other service-type scrapers. All functions accept pre-parsed HTML roots (callers run `parse()` themselves).
+
+### Constants
+- `TSSM`, `TSM` — Telerik version-specific tokens for AJAX requests
+
+### HTML helpers
+- `attr(root, id, attribute)` — read element attribute by id
+- `text(root, id)` — read element text content by id
+- `selectedOption(root, id)` — read selected option text from a dropdown
+- `hiddenValue(root, name)` — read hidden input value by name attribute
+- `csvRow(fields)` — serialize array to CSV row with proper quoting
+
+### VIEWSTATE handling
+- `readViewstate(root)` — extract all 6 VIEWSTATE fields into an object
+
+### HTTP request helpers
+- `ceGetPage(url, headers)` — fetch a page with document-navigation headers
+- `cePostPage(url, body, headers)` — POST an AJAX request with Telerik headers; body is URLSearchParams
+
+### Listing page helpers
+- `isValidListResponse(html)` — check if HTML is a valid CE listing page (not a login redirect)
+- `parseTotalPages(html)` — extract total page count from pagination widget
+- `searchFilterFields(root)` — read all 22 search filter fields from page 1 (date range, status, service type, etc.)
 
 ---
 

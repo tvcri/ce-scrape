@@ -77,18 +77,27 @@ Options:
   --sr-page-id ID         SR detail page ID (default: 660)
 ```
 
+## Architecture
+
+The scraper is split into two modules:
+
+- **`scrape-rides.js`** — TVCRI ride-specific orchestration: CLI parsing, Phase 1/2 loops, ride SR field extraction
+- **`ce-platform.js`** — Generic ClubExpress platform layer: VIEWSTATE handling, Telerik AJAX, pagination, session mechanics, HTML parsing helpers
+
+This split makes the CE platform mechanics reusable for future scrapers (donations, volunteer hours, etc.).
+
 ## How it works
 
 The scraper operates in two phases:
 
 **Phase 1 — Collect service request IDs**
 - Fetches the Member Services listing page
-- Captures VIEWSTATE and active search filters from the response
+- Captures VIEWSTATE and active search filters from the response (via `ce-platform.js`)
 - Paginates through results, extracting `srp_srid` for all "Ride:" services
 - Stops when a page returns no results (~7 pages typical)
 
 **Phase 2 — Extract detail fields**
-- For each collected srid, fetches the SR detail page
+- For each collected srid, fetches the SR detail page (via `ce-platform.js`)
 - Extracts appointment time and return pickup time (the missing fields)
 - Writes all fields to CSV
 
@@ -141,7 +150,10 @@ Check `run.log` for:
 
 ## Technical details
 
-See [CLAUDE.md](CLAUDE.md) for low-level details on ClubExpress platform architecture, VIEWSTATE handling, Telerik RadAjax behavior, and known gotchas.
+See [CLAUDE.md](CLAUDE.md) for:
+- Low-level details on ClubExpress platform architecture, VIEWSTATE handling, Telerik RadAjax behavior, and known gotchas
+- Full `ce-platform.js` API documentation
+- Session management and pagination mechanics
 
 ## License
 
