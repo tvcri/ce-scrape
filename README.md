@@ -4,9 +4,9 @@ A Node.js scraper for extracting ride service request data from ClubExpress (CE)
 
 ## Why this scraper?
 
-CE's Ad Hoc Reporting exports most ride service request fields, but omits two critical columns:
-- **Appointment time** — when the member should be ready
-- **Return pickup time** — for round-trip rides
+CE's Ad Hoc Reporting exports most ride service request fields, but omits two critical columns for round-trip requests:
+- **Appointment time** — when the outbound ride should arrive at the destination
+- **Return pickup time** — when the inbound trip should leave from the destination
 
 This scraper fetches the SR detail pages directly to extract these missing fields, then outputs a CSV that can be joined to the Ad Hoc report for a complete dataset.
 
