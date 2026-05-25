@@ -116,13 +116,6 @@ CE uses Telerik RadComboBox widgets for dropdowns. The actual `<select>` is hidd
 
 ---
 
-## Auxiliary scripts (kept for debugging)
-
-- `fetch-srids.js` — Phase 1 only; outputs one srid per line
-- `scrape-sr.js` — Phase 2 only; accepts `--srid-file` or `--start`/`--end` range
-
----
-
 ## Workflow
 
 1. Navigate to `https://villagecommonri.org/content.aspx?page_id=650&club_id=908317&actr=3` in Chrome
